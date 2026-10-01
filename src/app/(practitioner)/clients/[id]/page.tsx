@@ -9,6 +9,7 @@ import { ChevronLeft, Plus, FileText, CheckCircle2, Clock } from 'lucide-react'
 import type { Session } from '@/types/database'
 
 const formLinks = [
+  { id: 'form1', label: 'Form 1 — Initial Enquiry', href: (id: string) => `/clients/${id}/forms/enquiry` },
   { id: 'form2', label: 'Form 2 — Informed Consent', href: (id: string) => `/clients/${id}/forms/consent` },
   { id: 'form3', label: 'Form 3 — Case History', href: (id: string) => `/clients/${id}/forms/history` },
   { id: 'form5-0', label: 'Form 5 — Milestone (Session 0)', href: (id: string) => `/clients/${id}/forms/feedback/0` },
@@ -21,9 +22,10 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
   const { id } = await params
   const supabase = await createClient()
 
-  const [{ data: client }, { data: sessions }, { data: consent }, { data: caseHistory }] = await Promise.all([
+  const [{ data: client }, { data: sessions }, { data: enquiry }, { data: consent }, { data: caseHistory }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', id).single(),
     supabase.from('sessions').select('*').eq('client_id', id).order('session_number'),
+    supabase.from('form1_enquiry').select('id, filled_at').eq('client_id', id).single(),
     supabase.from('form2_consent').select('id, signed_at').eq('client_id', id).single(),
     supabase.from('form3_case_history').select('id, client_declaration_signed_at').eq('client_id', id).single(),
   ])
@@ -153,6 +155,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
             <CardContent className="space-y-2">
               {formLinks.map((f) => {
                 const filled =
+                  f.id === 'form1' ? !!enquiry?.filled_at :
                   f.id === 'form2' ? !!consent?.signed_at :
                   f.id === 'form3' ? !!caseHistory?.client_declaration_signed_at :
                   false
