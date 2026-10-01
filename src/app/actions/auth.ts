@@ -14,6 +14,16 @@ export async function practitionerLogin(formData: FormData) {
   redirect('/dashboard')
 }
 
+export async function sendPhoneOtp(formData: FormData) {
+  const phone = formData.get('phone') as string
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.signInWithOtp({ phone })
+
+  if (error) return { error: error.message }
+  return { success: true }
+}
+
 export async function sendClientOtp(formData: FormData) {
   const email = formData.get('email') as string
 
