@@ -6,6 +6,8 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code')
   const next = searchParams.get('next') ?? '/dashboard'
 
+  console.log('[auth/callback] origin:', origin, '| next:', next, '| code:', code ? 'present' : 'MISSING')
+
   if (code) {
     const redirectResponse = NextResponse.redirect(`${origin}${next}`)
 
@@ -27,13 +29,23 @@ export async function GET(request: NextRequest) {
     )
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
+    console.log('[auth/callback] exchangeCodeForSession:', error ? `ERROR: ${error.message}` : 'SUCCESS')
+
     if (!error) {
       return redirectResponse
     }
+
+    // Surface the exact error so we can debug
+    const errMsg = encodeURIComponent(error.message)
+    const fallbackWithErr = next.startsWith('/portal')
+      ? `/portal-login?error=${errMsg}`
+      : `/login?error=${errMsg}`
+    return NextResponse.redirect(`${origin}${fallbackWithErr}`)
   }
 
+  console.log('[auth/callback] no code in request — falling back')
   const fallback = next.startsWith('/portal')
-    ? '/portal-login?error=link_expired'
-    : '/login?error=auth_callback_error'
+    ? '/portal-login?error=no_code'
+    : '/login?error=no_code'
   return NextResponse.redirect(`${origin}${fallback}`)
 }
