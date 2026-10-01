@@ -14,5 +14,6 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
+  const fallback = next.startsWith('/portal') ? '/portal-login?error=link_expired' : '/login?error=auth_callback_error'
+  return NextResponse.redirect(`${origin}${fallback}`)
 }

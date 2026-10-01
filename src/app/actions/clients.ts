@@ -38,7 +38,7 @@ export async function createClientProfile(formData: FormData) {
       ? Number(formData.get('previous_sessions_count'))
       : null,
     referral_source: (formData.get('referral_source') as string) || null,
-    nsa_level: (formData.get('nsa_level') as string) || 'Not Yet Assessed',
+    nsa_level: (formData.get('nsa_level') as string) || null,
     case_study_number: generateCaseStudyNumber(),
     user_id: null,
   }

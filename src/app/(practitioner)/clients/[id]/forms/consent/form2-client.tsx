@@ -31,7 +31,7 @@ interface Props {
 export function Form2ConsentClient({ client, existing }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [signature, setSignature] = useState<string | null>(existing?.signature_data ?? null)
+  const [signature, setSignature] = useState<string | null>(existing?.client_signature ?? null)
   const [guardianName, setGuardianName] = useState(existing?.guardian_name ?? '')
   const [guardianRel, setGuardianRel] = useState(existing?.guardian_relationship ?? '')
   const [researchConsent, setResearchConsent] = useState(existing?.research_consent ?? false)
@@ -49,7 +49,7 @@ export function Form2ConsentClient({ client, existing }: Props) {
       const supabase = createClient()
       const payload = {
         client_id: client.id,
-        signature_data: signature,
+        client_signature: signature,
         guardian_name: guardianName || null,
         guardian_relationship: guardianRel || null,
         research_consent: researchConsent,
@@ -136,7 +136,7 @@ export function Form2ConsentClient({ client, existing }: Props) {
           </p>
           <SignaturePadComponent
             onSave={setSignature}
-            existingSignature={existing?.signature_data}
+            existingSignature={existing?.client_signature}
           />
         </CardContent>
       </Card>

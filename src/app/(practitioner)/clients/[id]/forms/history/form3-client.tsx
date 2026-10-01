@@ -63,35 +63,61 @@ export function Form3CaseHistoryClient({ client, existing }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(!!existing?.client_declaration_signed_at)
+  const [saved, setSaved] = useState(!!existing?.filled_at)
   const [signature, setSignature] = useState<string | null>(existing?.client_signature_data ?? null)
 
   const [data, setData] = useState({
-    current_concerns: existing?.current_concerns ?? '',
-    onset_duration: existing?.onset_duration ?? '',
-    areas_of_discomfort: (existing?.areas_of_discomfort ?? []).join(', '),
-    health_history: existing?.health_history ?? {
-      accidents: '', surgeries: '', hospitalisation: '', illness: '',
-      emotional_trauma: '', mental_trauma: '', birth_trauma: '',
+    // Symptoms tab — DB: chief_complaint, complaint_onset, complaint_areas
+    current_concerns: existing?.chief_complaint ?? '',
+    onset_duration: existing?.complaint_onset ?? '',
+    areas_of_discomfort: (existing?.complaint_areas ?? []).join(', '),
+    // Health history tab — DB: flat text columns
+    health_history: {
+      accidents: existing?.accidents ?? '',
+      surgeries: existing?.surgeries ?? '',
+      hospitalisation: existing?.hospitalisations ?? '',
+      illness: existing?.major_illnesses ?? '',
+      emotional_trauma: existing?.emotional_trauma ?? '',
+      mental_trauma: '',
+      birth_trauma: existing?.birth_complications ?? '',
     },
     family_history: existing?.family_history ?? '',
     menstrual_history: existing?.menstrual_history ?? '',
-    lifestyle: existing?.lifestyle ?? {
-      physical_activity: '', dietary_preferences: '', smoking: '', alcohol: '',
-      sleep_hours: '', daily_routine: '',
+    // Lifestyle tab — DB: exercise, diet, smoking, alcohol, sleep_hours, daily_routine
+    lifestyle: {
+      physical_activity: existing?.exercise ?? '',
+      dietary_preferences: existing?.diet ?? '',
+      smoking: existing?.smoking ?? '',
+      alcohol: existing?.alcohol ?? '',
+      sleep_hours: existing?.sleep_hours ?? '',
+      daily_routine: existing?.daily_routine ?? '',
     },
-    wellness_emotional: existing?.wellness_emotional ?? {
-      stress_level: '', stress_sources: '', support_system: '', hobbies: '', therapy_history: '',
+    // Wellness/emotional tab — DB: stress_description, support_system, hobbies, prior_therapies
+    wellness_emotional: {
+      stress_level: '',
+      stress_sources: existing?.stress_description ?? '',
+      support_system: existing?.support_system ?? '',
+      hobbies: existing?.hobbies ?? '',
+      therapy_history: existing?.prior_therapies ?? '',
     },
-    current_treatment: existing?.current_treatment ?? {
-      physician: '', diagnosis: '', medications: '', prior_therapies: '',
+    // Treatment tab — DB: primary_physician, current_diagnosis, current_medications, prior_therapies
+    current_treatment: {
+      physician: existing?.primary_physician ?? '',
+      diagnosis: existing?.current_diagnosis ?? '',
+      medications: existing?.current_medications ?? '',
+      prior_therapies: existing?.prior_therapies ?? '',
     },
-    symptom_severity_before: existing?.symptom_severity_before ?? Object.fromEntries(
+    // Severity tab — DB: symptom_severity (jsonb)
+    symptom_severity_before: existing?.symptom_severity ?? Object.fromEntries(
       SYMPTOM_CATEGORIES.map(c => [c, { score: 0, remarks: '' }])
     ),
-    vision_expectations: existing?.vision_expectations ?? Object.fromEntries(
-      VISION_QUESTIONS.map((q, i) => [`q${i + 1}`, ''])
-    ),
+    // Vision tab — DB: vision_for_health, desired_changes, goals, life_if_well
+    vision_expectations: {
+      q1: existing?.vision_for_health ?? '',
+      q2: existing?.desired_changes ?? '',
+      q3: existing?.goals ?? '',
+      q4: existing?.life_if_well ?? '',
+    },
   })
 
   function setField(key: string, value: any) {
@@ -109,19 +135,45 @@ export function Form3CaseHistoryClient({ client, existing }: Props) {
       const supabase = createClient()
       const payload = {
         client_id: client.id,
-        current_concerns: data.current_concerns,
-        onset_duration: data.onset_duration,
-        areas_of_discomfort: data.areas_of_discomfort.split(',').map((s: string) => s.trim()).filter(Boolean),
-        health_history: data.health_history,
-        family_history: data.family_history,
-        menstrual_history: client.gender === 'Female' ? data.menstrual_history : null,
-        lifestyle: data.lifestyle,
-        wellness_emotional: data.wellness_emotional,
-        current_treatment: data.current_treatment,
-        symptom_severity_before: data.symptom_severity_before,
-        vision_expectations: data.vision_expectations,
+        // Symptoms
+        chief_complaint: data.current_concerns || null,
+        complaint_onset: data.onset_duration || null,
+        complaint_areas: data.areas_of_discomfort.split(',').map((s: string) => s.trim()).filter(Boolean),
+        // Health history (flatten JSONB state → flat DB columns)
+        accidents: data.health_history.accidents || null,
+        surgeries: data.health_history.surgeries || null,
+        hospitalisations: data.health_history.hospitalisation || null,
+        major_illnesses: data.health_history.illness || null,
+        emotional_trauma: [data.health_history.emotional_trauma, data.health_history.mental_trauma].filter(Boolean).join('\n') || null,
+        birth_complications: data.health_history.birth_trauma || null,
+        family_history: data.family_history || null,
+        menstrual_history: client.gender === 'female' ? data.menstrual_history || null : null,
+        // Lifestyle (flatten JSONB state → flat DB columns)
+        exercise: data.lifestyle.physical_activity || null,
+        diet: data.lifestyle.dietary_preferences || null,
+        smoking: data.lifestyle.smoking || null,
+        alcohol: data.lifestyle.alcohol || null,
+        sleep_hours: data.lifestyle.sleep_hours || null,
+        daily_routine: data.lifestyle.daily_routine || null,
+        // Wellness / emotional (flatten JSONB state → flat DB columns)
+        stress_description: data.wellness_emotional.stress_sources || null,
+        support_system: data.wellness_emotional.support_system || null,
+        hobbies: data.wellness_emotional.hobbies || null,
+        prior_therapies: data.wellness_emotional.therapy_history || data.current_treatment.prior_therapies || null,
+        // Treatment
+        primary_physician: data.current_treatment.physician || null,
+        current_diagnosis: data.current_treatment.diagnosis || null,
+        current_medications: data.current_treatment.medications || null,
+        // Severity (stays as JSONB)
+        symptom_severity: data.symptom_severity_before,
+        // Vision (flatten JSONB state → flat DB columns)
+        vision_for_health: data.vision_expectations.q1 || null,
+        desired_changes: data.vision_expectations.q2 || null,
+        goals: data.vision_expectations.q3 || null,
+        life_if_well: data.vision_expectations.q4 || null,
+        // Signature & timestamp
         client_signature_data: signature,
-        client_declaration_signed_at: existing?.client_declaration_signed_at ?? new Date().toISOString(),
+        filled_at: existing?.filled_at ?? new Date().toISOString(),
       }
       const { error: err } = existing
         ? await supabase.from('form3_case_history').update(payload).eq('id', existing.id)
@@ -137,7 +189,7 @@ export function Form3CaseHistoryClient({ client, existing }: Props) {
       {saved && (
         <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
           <CheckCircle2 className="h-4 w-4" />
-          Saved · signed {existing?.client_declaration_signed_at ? formatDate(existing.client_declaration_signed_at) : 'just now'}
+          Saved · signed {existing?.filled_at ? formatDate(existing.filled_at) : 'just now'}
         </div>
       )}
 
@@ -193,7 +245,7 @@ export function Form3CaseHistoryClient({ client, existing }: Props) {
                 <Label>Family history (hereditary conditions)</Label>
                 <Textarea value={data.family_history} onChange={e => setField('family_history', e.target.value)} rows={2} placeholder="Diabetes, heart disease, etc." />
               </div>
-              {client.gender === 'Female' && (
+              {client.gender === 'female' && (
                 <div className="space-y-1.5">
                   <Label>Menstrual & reproductive history</Label>
                   <Textarea value={data.menstrual_history} onChange={e => setField('menstrual_history', e.target.value)} rows={2} />

@@ -12,15 +12,16 @@ import { ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
 const genderOptions = [
-  { value: 'Male', label: 'Male' },
-  { value: 'Female', label: 'Female' },
-  { value: 'Other', label: 'Other' },
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
 ]
 
 const bloodGroupOptions = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(v => ({ value: v, label: v }))
 
 const nsaLevelOptions = [
-  { value: 'Not Yet Assessed', label: 'Not Yet Assessed' },
+  { value: '', label: 'Not Yet Assessed' },
   { value: 'Level 1', label: 'Level 1 — Discover' },
   { value: 'Level 2', label: 'Level 2 — Transform' },
   { value: 'Level 3', label: 'Level 3 — Awaken' },
