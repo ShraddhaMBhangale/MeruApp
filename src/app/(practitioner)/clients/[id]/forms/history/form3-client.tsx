@@ -342,18 +342,21 @@ export function Form3CaseHistoryClient({ client, existing }: Props) {
           <Card>
             <CardHeader><CardTitle>Vision & Expectations</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {VISION_QUESTIONS.map((q, i) => (
-                <div key={i} className="space-y-1.5">
-                  <Label>{q}</Label>
-                  <Textarea
-                    rows={3}
-                    value={data.vision_expectations[`q${i + 1}`] ?? ''}
-                    onChange={e => setField('vision_expectations', {
-                      ...data.vision_expectations, [`q${i + 1}`]: e.target.value
-                    })}
-                  />
-                </div>
-              ))}
+              {VISION_QUESTIONS.map((q, i) => {
+                const key = `q${i + 1}` as 'q1' | 'q2' | 'q3' | 'q4'
+                return (
+                  <div key={i} className="space-y-1.5">
+                    <Label>{q}</Label>
+                    <Textarea
+                      rows={3}
+                      value={data.vision_expectations[key] ?? ''}
+                      onChange={e => setField('vision_expectations', {
+                        ...data.vision_expectations, [key]: e.target.value
+                      })}
+                    />
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         </TabsContent>
