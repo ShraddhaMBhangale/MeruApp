@@ -7,6 +7,7 @@ import { signOut } from '@/app/actions/auth'
 import {
   LayoutDashboard,
   Users,
+  Calendar,
   LogOut,
   Menu,
   X,
@@ -16,6 +17,7 @@ import { useState } from 'react'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clients', label: 'Clients', icon: Users },
+  { href: '/calendar', label: 'Calendar', icon: Calendar },
 ]
 
 export function Sidebar() {

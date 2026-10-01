@@ -79,12 +79,17 @@ export async function createSession(clientId: string, formData: FormData) {
 
   const nextNumber = existing && existing.length > 0 ? existing[0].session_number + 1 : 1
 
+  const sessionTime = formData.get('session_time') as string
+  const durationMinutes = formData.get('duration_minutes') as string
+
   const { data, error } = await supabase
     .from('sessions')
     .insert({
       client_id: clientId,
       session_number: nextNumber,
       session_date: (formData.get('session_date') as string) || new Date().toISOString().split('T')[0],
+      session_time: sessionTime || null,
+      duration_minutes: durationMinutes ? Number(durationMinutes) : 60,
       status: 'scheduled',
     })
     .select('id')

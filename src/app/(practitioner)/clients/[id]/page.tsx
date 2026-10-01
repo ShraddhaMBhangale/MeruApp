@@ -24,7 +24,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
 
   const [{ data: client }, { data: sessions }, { data: enquiry }, { data: consent }, { data: caseHistory }] = await Promise.all([
     supabase.from('clients').select('*').eq('id', id).single(),
-    supabase.from('sessions').select('*').eq('client_id', id).order('session_number'),
+    supabase.from('sessions').select('id, session_number, session_date, session_time, duration_minutes, status').eq('client_id', id).order('session_number'),
     supabase.from('form1_enquiry').select('id, filled_at').eq('client_id', id).single(),
     supabase.from('form2_consent').select('id, signed_at').eq('client_id', id).single(),
     supabase.from('form3_case_history').select('id, client_declaration_signed_at').eq('client_id', id).single(),
@@ -118,7 +118,10 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-slate-900">Session #{s.session_number}</p>
-                          <p className="text-xs text-slate-500">{formatDate(s.session_date)}</p>
+                          <p className="text-xs text-slate-500">
+                            {formatDate(s.session_date)}
+                            {s.session_time && ` · ${s.session_time.slice(0, 5)}`}
+                          </p>
                         </div>
                         <Badge variant={s.status === 'completed' ? 'success' : s.status === 'cancelled' ? 'danger' : 'info'}>
                           {s.status}
