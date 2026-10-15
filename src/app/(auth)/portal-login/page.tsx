@@ -2,81 +2,73 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { sendClientOtp, sendPhoneOtp } from '@/app/actions/auth'
+import { sendClientOtp } from '@/app/actions/auth'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Mail, Phone } from 'lucide-react'
+import { Mail } from 'lucide-react'
 
-type Tab = 'email' | 'phone'
-type PhoneStep = 'number' | 'otp'
+type Step = 'email' | 'otp'
 
 export default function PortalLoginPage() {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('email')
+  const [step, setStep] = useState<Step>('email')
+  const [email, setEmail] = useState('')
+  const [otp, setOtp] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sendPending, startSendTransition] = useTransition()
+  const [verifyPending, setVerifyPending] = useState(false)
+  const [oauthPending, setOauthPending] = useState<'google' | 'facebook' | null>(null)
 
-  // ── Email flow ─────────────────────────────────────────────────────────────
-  const [emailSent, setEmailSent]   = useState(false)
-  const [email, setEmail]           = useState('')
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [emailPending, startEmailTransition] = useTransition()
-
-  async function handleEmailSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSendCode(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setEmailError(null)
+    setError(null)
     const formData = new FormData(e.currentTarget)
-    setEmail(formData.get('email') as string)
-    startEmailTransition(async () => {
+    const emailValue = formData.get('email') as string
+    setEmail(emailValue)
+    startSendTransition(async () => {
       const result = await sendClientOtp(formData)
-      if (result?.error) setEmailError(result.error)
-      else setEmailSent(true)
+      if (result?.error) setError(result.error)
+      else setStep('otp')
     })
   }
 
-  // ── Phone flow ─────────────────────────────────────────────────────────────
-  const [phoneStep, setPhoneStep]   = useState<PhoneStep>('number')
-  const [phone, setPhone]           = useState('')
-  const [otp, setOtp]               = useState('')
-  const [phoneError, setPhoneError] = useState<string | null>(null)
-  const [phonePending, startPhoneTransition] = useTransition()
-  const [verifyPending, setVerifyPending]    = useState(false)
-
-  async function handleSendOtp(e: React.FormEvent<HTMLFormElement>) {
+  async function handleVerifyCode(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    setPhoneError(null)
-    // Normalise: ensure E.164 format (+91XXXXXXXXXX for India)
-    const raw = (e.currentTarget.elements.namedItem('phone') as HTMLInputElement).value.trim()
-    const normalised = raw.startsWith('+') ? raw : `+91${raw.replace(/^0/, '')}`
-    setPhone(normalised)
-    startPhoneTransition(async () => {
-      const fd = new FormData()
-      fd.append('phone', normalised)
-      const result = await sendPhoneOtp(fd)
-      if (result?.error) setPhoneError(result.error)
-      else setPhoneStep('otp')
-    })
-  }
-
-  async function handleVerifyOtp(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setPhoneError(null)
+    setError(null)
     setVerifyPending(true)
     try {
       const supabase = createClient()
       const { error } = await supabase.auth.verifyOtp({
-        phone,
+        email,
         token: otp,
-        type: 'sms',
+        type: 'email',
       })
-      if (error) { setPhoneError(error.message); return }
+      if (error) { setError(error.message); return }
       router.push('/portal')
     } finally {
       setVerifyPending(false)
     }
   }
 
-  // ── Logo ───────────────────────────────────────────────────────────────────
+  async function handleOAuth(provider: 'google' | 'facebook') {
+    setError(null)
+    setOauthPending(provider)
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/api/auth/callback?next=/portal`,
+      },
+    })
+    if (error) {
+      setError(error.message)
+      setOauthPending(null)
+    }
+    // Browser auto-redirects to provider on success — loading state stays until navigation
+  }
+
   const Logo = () => (
     <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-600 shadow-lg">
       <svg viewBox="0 0 24 24" fill="none" className="h-8 w-8 text-white" stroke="currentColor" strokeWidth={1.5}>
@@ -95,117 +87,118 @@ export default function PortalLoginPage() {
           <p className="mt-1 text-sm text-slate-500">Meru Chikitsa — Sign in to continue</p>
         </div>
 
-        {/* ── Tab switcher ── */}
-        <div className="flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-          {(['email', 'phone'] as Tab[]).map(t => (
-            <button key={t} type="button"
-              onClick={() => { setTab(t); setEmailError(null); setPhoneError(null) }}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-colors ${
-                tab === t
-                  ? 'bg-teal-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}>
-              {t === 'email' ? <Mail className="h-4 w-4" /> : <Phone className="h-4 w-4" />}
-              {t === 'email' ? 'Email link' : 'Phone OTP'}
-            </button>
-          ))}
-        </div>
+        {step === 'email' ? (
+          <div className="space-y-4">
+            {/* OAuth buttons */}
+            <div className="rounded-2xl bg-white p-6 shadow-sm border border-slate-200 space-y-3">
+              <button
+                type="button"
+                onClick={() => handleOAuth('google')}
+                disabled={!!oauthPending}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition-colors disabled:opacity-60"
+              >
+                {oauthPending === 'google' ? (
+                  <svg className="h-4 w-4 animate-spin text-slate-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                )}
+                Continue with Google
+              </button>
 
-        {/* ══════ EMAIL TAB ══════ */}
-        {tab === 'email' && (
-          !emailSent ? (
-            <form onSubmit={handleEmailSubmit}
-              className="space-y-5 rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleOAuth('facebook')}
+                disabled={!!oauthPending}
+                className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#1877F2] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#166FE5] transition-colors disabled:opacity-60"
+              >
+                {oauthPending === 'facebook' ? (
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4 fill-white" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                )}
+                Continue with Facebook
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div className="flex-1 border-t border-slate-200" />
+              <span className="text-xs text-slate-400 font-medium">or sign in with email</span>
+              <div className="flex-1 border-t border-slate-200" />
+            </div>
+
+            {/* Email form */}
+            <form onSubmit={handleSendCode}
+              className="space-y-5 rounded-2xl bg-white p-6 shadow-sm border border-slate-200">
               <div className="space-y-1.5">
                 <Label htmlFor="email" required>Your email address</Label>
                 <Input id="email" name="email" type="email"
                   placeholder="you@example.com" autoComplete="email" required />
               </div>
-              {emailError && (
+              {error && (
                 <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {emailError}
+                  {error}
                 </div>
               )}
-              <Button type="submit" className="w-full" size="lg" loading={emailPending}>
-                Send magic link
+              <Button type="submit" className="w-full" size="lg" loading={sendPending}>
+                Send code
               </Button>
             </form>
-          ) : (
-            <div className="rounded-2xl bg-white p-8 shadow-sm border border-slate-200 text-center space-y-4">
+          </div>
+        ) : (
+          <form onSubmit={handleVerifyCode}
+            className="space-y-5 rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
+            <div className="text-center space-y-2 pb-1">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50">
                 <Mail className="h-6 w-6 text-teal-600" />
               </div>
-              <h2 className="text-lg font-semibold text-slate-900">Check your email</h2>
-              <p className="text-sm text-slate-500">
-                We sent a sign-in link to <strong>{email}</strong>. Click it to access your portal.
+              <p className="text-sm text-slate-600">
+                We sent a 6-digit code to <strong>{email}</strong>
               </p>
-              <button onClick={() => { setEmailSent(false); setEmailError(null) }}
-                className="text-sm text-teal-600 hover:text-teal-700 font-medium">
-                Use a different email
-              </button>
             </div>
-          )
-        )}
-
-        {/* ══════ PHONE TAB ══════ */}
-        {tab === 'phone' && (
-          phoneStep === 'number' ? (
-            <form onSubmit={handleSendOtp}
-              className="space-y-5 rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
-              <div className="space-y-1.5">
-                <Label htmlFor="phone" required>Mobile number</Label>
-                <div className="flex gap-2">
-                  <span className="flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600">
-                    +91
-                  </span>
-                  <Input id="phone" name="phone" type="tel"
-                    placeholder="9876543210" autoComplete="tel"
-                    inputMode="numeric" maxLength={10} required />
-                </div>
-                <p className="text-xs text-slate-400">India numbers only. Enter without country code.</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="otp" required>6-digit code</Label>
+              <Input
+                id="otp"
+                name="otp"
+                type="text"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                inputMode="numeric"
+                maxLength={6}
+                autoComplete="one-time-code"
+                autoFocus
+                required
+              />
+            </div>
+            {error && (
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                {error}
               </div>
-              {phoneError && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {phoneError}
-                </div>
-              )}
-              <Button type="submit" className="w-full" size="lg" loading={phonePending}>
-                Send OTP
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleVerifyOtp}
-              className="space-y-5 rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
-              <div className="text-center space-y-1">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-teal-50">
-                  <Phone className="h-6 w-6 text-teal-600" />
-                </div>
-                <p className="text-sm text-slate-600 pt-2">
-                  OTP sent to <strong>{phone}</strong>
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="otp" required>Enter 6-digit OTP</Label>
-                <Input id="otp" name="otp" type="text"
-                  value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="123456" inputMode="numeric"
-                  maxLength={6} autoComplete="one-time-code" required />
-              </div>
-              {phoneError && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                  {phoneError}
-                </div>
-              )}
-              <Button type="submit" className="w-full" size="lg" loading={verifyPending}>
-                Verify &amp; Sign in
-              </Button>
-              <button type="button"
-                onClick={() => { setPhoneStep('number'); setOtp(''); setPhoneError(null) }}
-                className="w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium">
-                Use a different number
-              </button>
-            </form>
-          )
+            )}
+            <Button type="submit" className="w-full" size="lg" loading={verifyPending}>
+              Verify &amp; Sign in
+            </Button>
+            <button type="button"
+              onClick={() => { setStep('email'); setOtp(''); setError(null) }}
+              className="w-full text-center text-sm text-teal-600 hover:text-teal-700 font-medium">
+              Use a different email
+            </button>
+          </form>
         )}
 
         <p className="text-center text-sm text-slate-500">

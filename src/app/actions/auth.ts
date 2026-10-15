@@ -14,26 +14,12 @@ export async function practitionerLogin(formData: FormData) {
   redirect('/dashboard')
 }
 
-export async function sendPhoneOtp(formData: FormData) {
-  const phone = formData.get('phone') as string
-
-  const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithOtp({ phone })
-
-  if (error) return { error: error.message }
-  return { success: true }
-}
-
 export async function sendClientOtp(formData: FormData) {
   const email = formData.get('email') as string
 
   const supabase = await createClient()
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback?next=/portal`,
-    },
-  })
+  // No emailRedirectTo — Supabase sends a 6-digit OTP code instead of a magic link
+  const { error } = await supabase.auth.signInWithOtp({ email })
 
   if (error) return { error: error.message }
   return { success: true }

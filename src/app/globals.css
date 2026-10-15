@@ -8,6 +8,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Rit-Spanda brand palette */
+  --color-forest: #2E4A3B;
+  --color-leaf: #5B8A5E;
+  --color-gold: #C99A2E;
+  --color-gold-light: #E8D5A0;
+  --color-ivory: #F6F1E6;
+  --color-ivory-dark: #EDE8D8;
+  --color-rose: #E3B9B2;
+  /* Typography */
+  --font-serif: var(--font-cormorant), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-dm-sans), system-ui, -apple-system, sans-serif;
 }
 
 body {
