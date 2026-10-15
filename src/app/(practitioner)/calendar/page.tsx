@@ -18,5 +18,7 @@ export default async function CalendarPage() {
     .order('session_date')
     .order('session_time', { nullsFirst: true })
 
-  return <CalendarClient sessions={sessions ?? []} />
+  // Supabase infers the join as an array without generated types; runtime is correct (many-to-one)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <CalendarClient sessions={(sessions ?? []) as any} />
 }
