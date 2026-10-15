@@ -32,7 +32,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
 
   if (!client) notFound()
 
-  const completedSessions = sessions?.filter((s: Session) => s.status === 'completed').length ?? 0
+  const completedSessions = sessions?.filter((s) => s.status === 'completed').length ?? 0
   const totalSessions = sessions?.length ?? 0
   const age = client.date_of_birth ? calculateAge(client.date_of_birth) : null
 
@@ -107,7 +107,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
                 <p className="text-sm text-slate-500 py-4 text-center">No sessions recorded yet</p>
               ) : (
                 <ul className="divide-y divide-slate-100">
-                  {sessions.map((s: Session) => (
+                  {sessions.map((s) => (
                     <li key={s.id}>
                       <Link
                         href={`/clients/${id}/sessions/${s.id}`}
