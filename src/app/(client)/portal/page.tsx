@@ -40,9 +40,18 @@ export default async function PortalHomePage() {
     )
   }
 
+  const PACKAGE_TOTALS: Record<string, number> = {
+    complimentary: 1, single: 1, starter: 3,
+    discovery: 11, transform: 16, full_journey: 24,
+  }
+  const PACKAGE_LABELS: Record<string, string> = {
+    complimentary: 'Complimentary', single: 'Single Session', starter: 'Starter Pack',
+    discovery: 'Discovery', transform: 'Transform', full_journey: 'Full Journey', custom: 'Custom',
+  }
+
   const today = new Date().toISOString().split('T')[0]
   const [{ data: sessions }, { data: form2 }, { data: form3 }, { data: nextSession }] = await Promise.all([
-    supabase.from('sessions').select('*').eq('client_id', client.id).order('session_number'),
+    supabase.from('sessions').select('id, session_number, session_date, status, package_type').eq('client_id', client.id).order('session_number'),
     supabase.from('form2_consent').select('id, signed_at').eq('client_id', client.id).single(),
     supabase.from('form3_case_history').select('id, filled_at').eq('client_id', client.id).single(),
     supabase.from('sessions').select('id, session_number, session_date, session_time, status')
@@ -57,7 +66,13 @@ export default async function PortalHomePage() {
 
   const completedSessions = sessions?.filter(s => s.status === 'completed').length ?? 0
   const totalSessions = sessions?.length ?? 0
-  const progressPct = Math.round((completedSessions / 24) * 100)
+
+  // Derive package from the first session that has a package_type set
+  const packageType = sessions?.find(s => s.package_type)?.package_type ?? null
+  const packageTotal = packageType ? (PACKAGE_TOTALS[packageType] ?? totalSessions) : totalSessions
+  const packageLabel = packageType ? (PACKAGE_LABELS[packageType] ?? packageType) : null
+  const remaining = Math.max(0, packageTotal - completedSessions)
+  const progressPct = packageTotal > 0 ? Math.round((completedSessions / packageTotal) * 100) : 0
 
   const milestones = [0, 8, 16, 24]
   const feedbackDue = milestones.filter(m => completedSessions >= m)
@@ -92,6 +107,30 @@ export default async function PortalHomePage() {
         </Card>
       )}
 
+      {/* Package summary */}
+      {packageLabel && (
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="text-center">
+            <CardContent className="py-4">
+              <p className="text-2xl font-bold text-teal-700">{completedSessions}</p>
+              <p className="text-xs text-slate-500 mt-1">Completed</p>
+            </CardContent>
+          </Card>
+          <Card className="text-center">
+            <CardContent className="py-4">
+              <p className="text-2xl font-bold text-slate-700">{packageTotal}</p>
+              <p className="text-xs text-slate-500 mt-1">{packageLabel}</p>
+            </CardContent>
+          </Card>
+          <Card className="text-center">
+            <CardContent className="py-4">
+              <p className="text-2xl font-bold text-amber-600">{remaining}</p>
+              <p className="text-xs text-slate-500 mt-1">Remaining</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Progress */}
       <Card>
         <CardHeader>
@@ -102,7 +141,7 @@ export default async function PortalHomePage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600">{completedSessions} of 24 sessions completed</span>
+            <span className="text-slate-600">{completedSessions} of {packageTotal} sessions completed</span>
             <span className="font-medium text-teal-600">{progressPct}%</span>
           </div>
           <div className="h-2.5 rounded-full bg-slate-100">
@@ -111,13 +150,15 @@ export default async function PortalHomePage() {
               style={{ width: `${progressPct}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-slate-400 pt-1">
-            {[0, 8, 16, 24].map(m => (
-              <span key={m} className={completedSessions >= m ? 'text-teal-600 font-medium' : ''}>
-                {m === 0 ? 'Start' : `S${m}`}
-              </span>
-            ))}
-          </div>
+          {packageTotal >= 11 && (
+            <div className="flex justify-between text-xs text-slate-400 pt-1">
+              {[0, 8, 16, 24].filter(m => m <= packageTotal).map(m => (
+                <span key={m} className={completedSessions >= m ? 'text-teal-600 font-medium' : ''}>
+                  {m === 0 ? 'Start' : `S${m}`}
+                </span>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -178,12 +219,12 @@ export default async function PortalHomePage() {
         <Card>
           <CardHeader><CardTitle>Recent Sessions</CardTitle></CardHeader>
           <CardContent className="divide-y divide-slate-100">
-            {sessions.slice(-5).reverse().map(s => (
+            {[...sessions].reverse().slice(0, 5).map(s => (
               <div key={s.id} className="flex items-center justify-between py-2.5">
                 <span className="text-sm text-slate-700">Session #{s.session_number}</span>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-400">{formatDate(s.session_date)}</span>
-                  <Badge variant={s.status === 'completed' ? 'success' : 'warning'}>
+                  <Badge variant={s.status === 'completed' ? 'success' : s.status === 'cancelled' ? 'danger' : 'warning'}>
                     {s.status}
                   </Badge>
                 </div>

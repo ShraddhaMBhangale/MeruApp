@@ -17,11 +17,22 @@ const DURATIONS = [
   { value: '90', label: '1.5 hours' },
 ]
 
+const PACKAGES = [
+  { value: 'complimentary', label: 'Complimentary (1 session)', total: 1 },
+  { value: 'single', label: 'Single Session (1)', total: 1 },
+  { value: 'starter', label: 'Starter (3 sessions)', total: 3 },
+  { value: 'discovery', label: 'Discovery (11 sessions)', total: 11 },
+  { value: 'transform', label: 'Transform (16 sessions)', total: 16 },
+  { value: 'full_journey', label: 'Full Journey (24 sessions)', total: 24 },
+  { value: 'custom', label: 'Custom', total: 0 },
+]
+
 export default function NewSessionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState('60')
+  const [packageType, setPackageType] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -30,6 +41,7 @@ export default function NewSessionPage({ params }: { params: Promise<{ id: strin
     setError(null)
     const formData = new FormData(e.currentTarget)
     formData.set('duration_minutes', duration)
+    if (packageType) formData.set('package_type', packageType)
     startTransition(async () => {
       const result = await createSession(id, formData)
       if (result?.error) setError(result.error)
@@ -78,6 +90,20 @@ export default function NewSessionPage({ params }: { params: Promise<{ id: strin
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Package</Label>
+              <select
+                value={packageType}
+                onChange={e => setPackageType(e.target.value)}
+                className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="">— Select package —</option>
+                {PACKAGES.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
             </div>
 
             {error && (

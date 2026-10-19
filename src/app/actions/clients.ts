@@ -98,6 +98,7 @@ export async function createSession(clientId: string, formData: FormData) {
 
   const sessionTime = formData.get('session_time') as string
   const durationMinutes = formData.get('duration_minutes') as string
+  const packageType = formData.get('package_type') as string
 
   const { data, error } = await supabase
     .from('sessions')
@@ -107,6 +108,7 @@ export async function createSession(clientId: string, formData: FormData) {
       session_date: (formData.get('session_date') as string) || new Date().toISOString().split('T')[0],
       session_time: sessionTime || null,
       duration_minutes: durationMinutes ? Number(durationMinutes) : 60,
+      package_type: packageType || null,
       status: 'scheduled',
     })
     .select('id')
