@@ -4,8 +4,10 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, Sparkles } from 'lucide-react'
+import { CheckCircle2, Sparkles, Heart, ExternalLink } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+
+const AOL_DONATION_URL = 'https://www.artofliving.online/donate.php?nca_id=969567'
 
 const PACKAGES = [
   {
@@ -70,7 +72,7 @@ interface Payment {
 }
 
 interface Props {
-  client: { id: string; full_name: string; email: string | null }
+  client: { id: string; full_name: string; email: string | null; is_donation_client?: boolean }
   payments: Payment[]
 }
 
@@ -157,10 +159,35 @@ export function PackagesClient({ client, payments }: Props) {
     }
   }
 
+  const isDonation = !!client.is_donation_client
   const paidPackages = payments.filter(p => p.status === 'paid')
 
   return (
     <div className="space-y-8">
+      {/* Donation client notice */}
+      {isDonation && (
+        <div className="flex items-start gap-3 rounded-xl bg-rose-50 border border-rose-200 p-4">
+          <Heart className="h-5 w-5 text-rose-500 shrink-0 mt-0.5 fill-rose-400" />
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-rose-800">Your session fees support the Art of Living Foundation</p>
+            <p className="text-xs text-rose-600">
+              A portion of the fees for your sessions is donated to the Art of Living Foundation.
+              Please use the donation link below when making payment.
+            </p>
+            <a
+              href={AOL_DONATION_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 transition-colors"
+            >
+              <Heart className="h-4 w-4 fill-white" />
+              Donate to Art of Living
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Feedback */}
       {success && (
         <div className="flex items-start gap-3 rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-sm text-emerald-800">
@@ -210,16 +237,32 @@ export function PackagesClient({ client, payments }: Props) {
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className="w-full"
-                  size="sm"
-                  variant={pkg.popular ? 'default' : 'outline'}
-                  onClick={() => handlePurchase(pkg)}
-                  loading={loading === pkg.key}
-                  disabled={!!loading}
-                >
-                  {pkg.price === 0 ? 'Book free session' : 'Pay & activate'}
-                </Button>
+                {isDonation && pkg.price > 0 ? (
+                  <a
+                    href={AOL_DONATION_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                      pkg.popular
+                        ? 'bg-rose-600 text-white hover:bg-rose-700'
+                        : 'border border-rose-300 text-rose-700 hover:bg-rose-50'
+                    }`}
+                  >
+                    <Heart className="h-3.5 w-3.5 fill-current" />
+                    Donate to Art of Living
+                  </a>
+                ) : (
+                  <Button
+                    className="w-full"
+                    size="sm"
+                    variant={pkg.popular ? 'default' : 'outline'}
+                    onClick={() => handlePurchase(pkg)}
+                    loading={loading === pkg.key}
+                    disabled={!!loading}
+                  >
+                    {pkg.price === 0 ? 'Book free session' : 'Pay & activate'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

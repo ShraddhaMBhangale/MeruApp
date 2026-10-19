@@ -518,6 +518,21 @@ export function LandingPage() {
 
           <div style={{ width: 40, height: 1, backgroundColor: 'rgba(46,74,59,0.2)', margin: '0 auto 28px' }} />
 
+          {/* AoL donation */}
+          <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: '#2E4A3B', opacity: 0.6 }}>A portion of our earnings supports the</span>
+            <a
+              href="https://www.artofliving.online/donate.php?nca_id=969567"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ fontSize: 12, color: '#C99A2E', fontWeight: 500, textDecoration: 'none' }}
+              onMouseEnter={e => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={e => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              Art of Living Foundation ↗
+            </a>
+          </div>
+
           <p style={{ fontSize: 12, color: '#2E4A3B', opacity: 0.45, marginBottom: 6 }}>
             © 2026 Rit-Spanda Wellness Studio · All rights reserved
           </p>

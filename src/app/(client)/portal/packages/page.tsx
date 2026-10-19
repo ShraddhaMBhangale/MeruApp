@@ -11,7 +11,7 @@ export default async function PackagesPage() {
 
   const { data: client } = await supabase
     .from('clients')
-    .select('id, full_name, email')
+    .select('id, full_name, email, is_donation_client')
     .eq('user_id', user.id)
     .single()
   if (!client) redirect('/portal')

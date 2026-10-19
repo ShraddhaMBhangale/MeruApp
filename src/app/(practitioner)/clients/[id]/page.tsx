@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { ChevronLeft, Plus, FileText, CheckCircle2, Clock } from 'lucide-react'
 import type { Session } from '@/types/database'
 import { InviteButton } from './invite-button'
+import { DonationToggle } from './donation-toggle'
 
 const formLinks = [
   { id: 'form1', label: 'Form 1 — Initial Enquiry', href: (id: string) => `/clients/${id}/forms/enquiry` },
@@ -159,6 +160,9 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
               {client.occupation && <Row label="Occupation" value={client.occupation} />}
               {client.referral_source && <Row label="Referred by" value={client.referral_source} />}
               <Row label="Member since" value={formatDate(client.created_at)} />
+              <div className="pt-1">
+                <DonationToggle clientId={id} initial={!!client.is_donation_client} />
+              </div>
             </CardContent>
           </Card>
 
