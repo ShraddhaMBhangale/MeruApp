@@ -38,9 +38,14 @@ export function InviteButton({ clientId, hasEmail, alreadyLinked }: {
 
   if (sent) {
     return (
-      <div className="flex items-center gap-1.5 text-xs text-emerald-600">
-        <CheckCircle2 className="h-3.5 w-3.5" />
-        Invite sent — client will receive a sign-in code
+      <div className="space-y-1 text-xs">
+        <div className="flex items-center gap-1.5 text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          Invite sent!
+        </div>
+        <p className="text-slate-400 leading-snug">
+          Ask the client to go to <span className="font-medium text-slate-600">/portal-login</span>, enter their email, and use the code they receive.
+        </p>
       </div>
     )
   }

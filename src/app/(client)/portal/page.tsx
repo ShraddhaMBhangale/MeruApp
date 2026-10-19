@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -17,16 +17,18 @@ export default async function PortalHomePage() {
     .eq('user_id', user.id)
     .single()
 
-  // Auto-link: if not found by user_id, try matching by email and link on first sign-in
+  // Auto-link: RLS blocks unlinked clients from finding their own row by email,
+  // so use the admin client (bypasses RLS) for this one trusted lookup.
   if (!client && user.email) {
-    const { data: byEmail } = await supabase
+    const admin = createAdminClient()
+    const { data: byEmail } = await admin
       .from('clients')
       .select('*')
       .eq('email', user.email)
       .is('user_id', null)
       .single()
     if (byEmail) {
-      await supabase.from('clients').update({ user_id: user.id }).eq('id', byEmail.id)
+      await admin.from('clients').update({ user_id: user.id }).eq('id', byEmail.id)
       client = { ...byEmail, user_id: user.id }
     }
   }
