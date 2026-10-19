@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { CheckCircle2, Clock, FileText, ChevronRight, CalendarDays } from 'lucide-react'
+import { CheckCircle2, Clock, FileText, ChevronRight, CalendarDays, CreditCard } from 'lucide-react'
 import { formatDate, calculateAge } from '@/lib/utils'
 
 export default async function PortalHomePage() {
@@ -50,7 +50,7 @@ export default async function PortalHomePage() {
   }
 
   const today = new Date().toISOString().split('T')[0]
-  const [{ data: sessions }, { data: form2 }, { data: form3 }, { data: nextSession }] = await Promise.all([
+  const [{ data: sessions }, { data: form2 }, { data: form3 }, { data: nextSession }, { data: lastPayment }] = await Promise.all([
     supabase.from('sessions').select('id, session_number, session_date, status, package_type').eq('client_id', client.id).order('session_number'),
     supabase.from('form2_consent').select('id, signed_at').eq('client_id', client.id).single(),
     supabase.from('form3_case_history').select('id, filled_at').eq('client_id', client.id).single(),
@@ -60,6 +60,12 @@ export default async function PortalHomePage() {
       .gte('session_date', today)
       .order('session_date')
       .order('session_time', { nullsFirst: true })
+      .limit(1)
+      .single(),
+    supabase.from('payments').select('package_label, status, paid_at')
+      .eq('client_id', client.id)
+      .eq('status', 'paid')
+      .order('paid_at', { ascending: false })
       .limit(1)
       .single(),
   ])
@@ -161,6 +167,28 @@ export default async function PortalHomePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Packages */}
+      <Link href="/portal/packages" className="block">
+        <Card className="hover:shadow-md transition-shadow cursor-pointer">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-50 shrink-0">
+                  <CreditCard className="h-4.5 w-4.5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">Packages &amp; Payments</p>
+                  <p className="text-xs text-slate-500">
+                    {lastPayment ? `Active: ${lastPayment.package_label ?? '—'}` : 'View and purchase packages'}
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Forms */}
       <Card>
