@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
-import { CheckCircle2, Clock, FileText, ChevronRight } from 'lucide-react'
+import { CheckCircle2, Clock, FileText, ChevronRight, CalendarDays } from 'lucide-react'
 import { formatDate, calculateAge } from '@/lib/utils'
 
 export default async function PortalHomePage() {
@@ -11,11 +11,25 @@ export default async function PortalHomePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/portal-login')
 
-  const { data: client } = await supabase
+  let { data: client } = await supabase
     .from('clients')
     .select('*')
     .eq('user_id', user.id)
     .single()
+
+  // Auto-link: if not found by user_id, try matching by email and link on first sign-in
+  if (!client && user.email) {
+    const { data: byEmail } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('email', user.email)
+      .is('user_id', null)
+      .single()
+    if (byEmail) {
+      await supabase.from('clients').update({ user_id: user.id }).eq('id', byEmail.id)
+      client = { ...byEmail, user_id: user.id }
+    }
+  }
 
   if (!client) {
     return (
@@ -26,10 +40,19 @@ export default async function PortalHomePage() {
     )
   }
 
-  const [{ data: sessions }, { data: form2 }, { data: form3 }] = await Promise.all([
+  const today = new Date().toISOString().split('T')[0]
+  const [{ data: sessions }, { data: form2 }, { data: form3 }, { data: nextSession }] = await Promise.all([
     supabase.from('sessions').select('*').eq('client_id', client.id).order('session_number'),
     supabase.from('form2_consent').select('id, signed_at').eq('client_id', client.id).single(),
     supabase.from('form3_case_history').select('id, filled_at').eq('client_id', client.id).single(),
+    supabase.from('sessions').select('id, session_number, session_date, session_time, status')
+      .eq('client_id', client.id)
+      .eq('status', 'scheduled')
+      .gte('session_date', today)
+      .order('session_date')
+      .order('session_time', { nullsFirst: true })
+      .limit(1)
+      .single(),
   ])
 
   const completedSessions = sessions?.filter(s => s.status === 'completed').length ?? 0
@@ -48,6 +71,26 @@ export default async function PortalHomePage() {
         <h1 className="text-2xl font-bold text-slate-900">Welcome back, {client.full_name.split(' ')[0]}</h1>
         <p className="text-sm text-slate-500 mt-0.5">Case Study No. {client.case_study_number}</p>
       </div>
+
+      {/* Next session */}
+      {nextSession && (
+        <Card className="border-teal-200 bg-teal-50">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-teal-100 shrink-0">
+                <CalendarDays className="h-5 w-5 text-teal-700" />
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-teal-600">Next Session</p>
+                <p className="text-sm font-semibold text-teal-900">
+                  Session #{nextSession.session_number} — {formatDate(nextSession.session_date)}
+                  {nextSession.session_time && ` at ${nextSession.session_time.slice(0, 5)}`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Progress */}
       <Card>

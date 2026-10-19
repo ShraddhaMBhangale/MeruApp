@@ -7,6 +7,7 @@ import { formatDate, calculateAge, getInitials } from '@/lib/utils'
 import Link from 'next/link'
 import { ChevronLeft, Plus, FileText, CheckCircle2, Clock } from 'lucide-react'
 import type { Session } from '@/types/database'
+import { InviteButton } from './invite-button'
 
 const formLinks = [
   { id: 'form1', label: 'Form 1 — Initial Enquiry', href: (id: string) => `/clients/${id}/forms/enquiry` },
@@ -139,7 +140,16 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
         <div className="space-y-6">
           {/* Personal info */}
           <Card>
-            <CardHeader><CardTitle>Personal</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Personal</CardTitle>
+                <InviteButton
+                  clientId={id}
+                  hasEmail={!!client.email}
+                  alreadyLinked={!!client.user_id}
+                />
+              </div>
+            </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {age && <Row label="Age" value={`${age} years`} />}
               {client.gender && <Row label="Gender" value={client.gender} />}

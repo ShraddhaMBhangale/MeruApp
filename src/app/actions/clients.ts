@@ -50,6 +50,23 @@ export async function createClientProfile(formData: FormData) {
   redirect(`/clients/${data.id}`)
 }
 
+export async function sendPortalInvite(clientId: string) {
+  const supabase = await createClient()
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('email, full_name')
+    .eq('id', clientId)
+    .single()
+
+  if (!client?.email) return { error: 'Client has no email address on record.' }
+
+  const { error } = await supabase.auth.signInWithOtp({ email: client.email })
+  if (error) return { error: error.message }
+
+  return { success: true, email: client.email }
+}
+
 export async function updateClientProfile(clientId: string, formData: FormData) {
   const supabase = await createClient()
 
