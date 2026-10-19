@@ -255,7 +255,7 @@ export function PackagesClient({ client, payments }: Props) {
                   <Button
                     className="w-full"
                     size="sm"
-                    variant={pkg.popular ? 'default' : 'outline'}
+                    variant={pkg.popular ? 'primary' : 'outline'}
                     onClick={() => handlePurchase(pkg)}
                     loading={loading === pkg.key}
                     disabled={!!loading}
