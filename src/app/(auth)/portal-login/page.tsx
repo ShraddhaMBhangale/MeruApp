@@ -166,20 +166,20 @@ export default function PortalLoginPage() {
                 <Mail className="h-6 w-6 text-teal-600" />
               </div>
               <p className="text-sm text-slate-600">
-                We sent a 6-digit code to <strong>{email}</strong>
+                We sent a sign-in code to <strong>{email}</strong>
               </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="otp" required>6-digit code</Label>
+              <Label htmlFor="otp" required>Sign-in code</Label>
               <Input
                 id="otp"
                 name="otp"
                 type="text"
                 value={otp}
-                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="123456"
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Enter code"
                 inputMode="numeric"
-                maxLength={6}
+                maxLength={8}
                 autoComplete="one-time-code"
                 autoFocus
                 required
